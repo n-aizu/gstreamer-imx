@@ -63,6 +63,7 @@ struct _GstImxBayer
   float red;
   float green;
   float blue;
+  unsigned int chrom;
   GstImxEglVivTransGLES2Renderer *renderer;
 };
 
@@ -90,6 +91,7 @@ enum
   PROP_RED_FILTER,
   PROP_GREEN_FILTER,
   PROP_BLUE_FILTER,
+  PROP_CHROM_VALUE,
 };
 
 GType imx_bayer_get_type (void);
@@ -235,6 +237,19 @@ imx_bayer_class_init (GstImxBayerClass * klass)
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
 		)
 	);
+
+	g_object_class_install_property(
+		gobject_class,
+		PROP_CHROM_VALUE,
+		g_param_spec_uint(
+			"chrom",
+			"chrominance",
+			"chrominance value",
+			0, 255,
+			128,
+			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
+		)
+	);
 }
 
 static void
@@ -269,6 +284,9 @@ imx_bayer_set_property (GObject * object, guint prop_id,
     case PROP_BLUE_FILTER:
       imxbayer->blue = g_value_get_float(value);
       break;
+    case PROP_CHROM_VALUE:
+      imxbayer->chrom = g_value_get_uint(value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -299,6 +317,9 @@ imx_bayer_get_property (GObject * object, guint prop_id,
       break;
     case PROP_BLUE_FILTER:
       g_value_set_float(value, imxbayer->blue);
+      break;
+    case PROP_CHROM_VALUE:
+      g_value_set_uint(value, imxbayer->chrom);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -356,7 +377,8 @@ imx_bayer_set_caps (GstBaseTransform * base, GstCaps * incaps,
 												imxbayer->green,
 												imxbayer->blue,
 												imxbayer->fbset,
-												imxbayer->extbuf) == FALSE) {
+												imxbayer->extbuf,
+												imxbayer->chrom) == FALSE) {
 	  return FALSE;
   }
 
@@ -377,6 +399,7 @@ imx_bayer_reset (GstImxBayer * filter)
   filter->blue = 1.0;
   filter->fbset = 0;
   filter->extbuf = 0;
+  filter->chrom = 128;
 
   gst_video_info_init (&filter->info);
 }

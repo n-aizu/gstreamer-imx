@@ -41,6 +41,7 @@ struct _GstImxEglVivTransGLES2Renderer
 	float red_coeff_value;
 	float green_coeff_value;
 	float blue_coeff_value;
+	unsigned char v_value;
 
 	gboolean ext_mapped;
 	gboolean viv_ext;
@@ -55,8 +56,6 @@ struct _GstImxEglVivTransGLES2Renderer
 	char fb_name[16];
 	char display_name[8];
 };
-
-#define VIV_DUMMY_VPLANE (0x80)
 
 #define GLES2_RENDERER_LOCK(renderer) g_mutex_lock(&((renderer)->mutex))
 #define GLES2_RENDERER_UNLOCK(renderer) g_mutex_unlock(&((renderer)->mutex))
@@ -306,7 +305,7 @@ end:
 
 
 
-gboolean gst_imx_egl_viv_trans_gles2_renderer_setup(GstImxEglVivTransGLES2Renderer *renderer, int width, int height, int in_fmt, int out_fmt, float red_coeff, float green_coeff, float blue_coeff, unsigned int fbset, unsigned int extbuf)
+gboolean gst_imx_egl_viv_trans_gles2_renderer_setup(GstImxEglVivTransGLES2Renderer *renderer, int width, int height, int in_fmt, int out_fmt, float red_coeff, float green_coeff, float blue_coeff, unsigned int fbset, unsigned int extbuf, unsigned int chrom)
 {
 	GLubyte const *extensions;
 
@@ -318,6 +317,7 @@ gboolean gst_imx_egl_viv_trans_gles2_renderer_setup(GstImxEglVivTransGLES2Render
 	renderer->green_coeff_value = green_coeff;
 	renderer->blue_coeff_value = blue_coeff;
 	renderer->ext_mapped = (extbuf ? TRUE : FALSE);
+	renderer->v_value = (unsigned char)chrom;
 
 	if (!gst_imx_egl_viv_trans_mapfb(renderer, fbset))
 	{
@@ -840,7 +840,7 @@ static gboolean gst_imx_egl_viv_trans_gles2_renderer_fill_texture(GstImxEglVivTr
 			/* https://community.freescale.com/message/343739#343739 */
 			ptr = (char *)map_info.data;
 			uoffset = ysize + uvsize;
-			memset((ptr + uoffset), VIV_DUMMY_VPLANE, uvsize);
+			memset((ptr + uoffset), renderer->v_value, uvsize);
 
 			/* glTexDirectVIVMap is async API */
 			glTexDirectVIVMap(
@@ -867,7 +867,7 @@ static gboolean gst_imx_egl_viv_trans_gles2_renderer_fill_texture(GstImxEglVivTr
 				return FALSE;
 
 			memcpy(renderer->viv_planes[0], map_info.data, ysize);
-			memset(renderer->viv_planes[2], VIV_DUMMY_VPLANE, uvsize);
+			memset(renderer->viv_planes[2], renderer->v_value, uvsize);
 		}
 	}
 	else {
@@ -1054,6 +1054,11 @@ GstImxEglVivTransGLES2Renderer* gst_imx_egl_viv_trans_gles2_renderer_create(char
 	renderer->first_red = -1;
 	renderer->position_aloc = -1;
 	renderer->texcoords_aloc = -1;
+
+	renderer->red_coeff_value = 0.0;
+	renderer->green_coeff_value = 0.0;
+	renderer->blue_coeff_value = 0.0;
+	renderer->v_value = 0;
 
 	renderer->ext_mapped = FALSE;
 	renderer->viv_ext = TRUE;

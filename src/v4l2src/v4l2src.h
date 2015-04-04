@@ -53,6 +53,7 @@ struct _GstImxV4l2Src
 
 	/* properties */
 	gint capture_mode;
+	gint capture_format;
 	gint fps_n;
 	gint fps_d;
 	gint input;

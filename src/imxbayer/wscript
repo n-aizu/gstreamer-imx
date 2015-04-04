@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+
+# Try to find one library of a given list
+# The first library found is stored in the given uselib_store
+def check_lib_list(conf, uselib, uselib_store, lib_list):
+	for lib in lib_list:
+		if conf.check_cc(mandatory = 0, lib = lib, uselib = uselib, uselib_store = uselib_store):
+			return True
+	return False
+
+def check_gles2(conf, uselib = 'EGL', lib_list = ['GLESv2']):
+	retval = \
+	  check_lib_list(conf = conf, uselib = uselib, uselib_store = 'GLES2', lib_list = lib_list) and \
+	  conf.check_cc(mandatory = 0, header_name = 'GLES2/gl2.h', uselib = uselib, uselib_store = 'GLES2')
+	conf.check_cc(mandatory = 0, header_name = ['GLES2/gl2.h', 'GLES2/gl2ext.h'], uselib = uselib, define_name = 'WITH_GL2EXT_H', uselib_store = 'GLES2')
+	return retval
+
+def check_vivante_egl(conf, egl_extra_defines):
+	if not conf.check_cc(mandatory = 0, lib = ['EGL'], uselib_store = 'EGL'):
+		return False
+	old_cflags = list(conf.env['CFLAGS'])
+	extra_defines = ['LINUX']
+	if egl_extra_defines:
+		extra_defines += egl_extra_defines
+	extra_cflags = map(lambda x: conf.env['DEFINES_ST'] % x, extra_defines)
+	conf.env['CFLAGS'] += extra_cflags
+	retval = \
+		conf.check_cc(mandatory = 0, header_name = 'EGL/eglvivante.h', uselib_store = 'EGL') and \
+		conf.check_cc(mandatory = 0, header_name = 'EGL/egl.h', uselib_store = 'EGL')
+	conf.env['CFLAGS'] = old_cflags
+	if retval:
+		conf.env['DEFINES_EGL'] += extra_defines
+	return retval
+
+def check_ipu(conf):
+	if conf.check_cc(mandatory = 0, header_name = ['linux/ipu.h', 'linux/fb.h']):
+			return True
+	return False
+
+def check_dependencies(conf):
+	if not check_vivante_egl(conf, ['EGL_API_FB']):
+		return False
+	conf.env['PLATFORM_SOURCE'] = ['egl_platform_fb.c']
+
+	if not check_gles2(conf):
+		return False
+
+	if not check_ipu(conf):
+		return False
+
+	return True
+
+
+def configure(conf):
+	from waflib.Build import Logs
+
+	if check_dependencies(conf):
+		Logs.pprint('GREEN', 'Bayer converter with i.MX HW will be built')
+		Logs.pprint('GREEN', 'Selected EGL platform: ' + conf.options.egl_platform)
+		conf.env['IMXBAYER_ENABLED'] = 1
+	else:
+		Logs.pprint('RED', 'EGL sink with Vivante direct textures will not be built - dependencies not found')
+
+
+def build(bld):
+	if bld.env['IMXBAYER_ENABLED']:
+		bld(
+			features = ['c', bld.env['CLIBTYPE']],
+			includes = ['../..'],
+			use = 'gstimxcommon',
+			uselib = ['EGL', 'GLES2'] + bld.env['PLATFORM_USELIBS'] + ['GSTREAMER_VIDEO'] + bld.env['COMMON_USELIB'],
+			target = 'gstimxbayer',
+			source = ['videotransform.c', 'gles2_renderer.c', 'egl_misc.c', 'plugin.c', 'ipu.c', 'ipu_allocator.c'] + bld.env['PLATFORM_SOURCE'],
+			install_path = bld.env['PLUGIN_INSTALL_PATH']
+		)
+

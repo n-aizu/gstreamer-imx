@@ -34,7 +34,7 @@ def check_vivante_egl(conf, egl_extra_defines):
 	return retval
 
 def check_ipu(conf):
-	if conf.check_cc(mandatory = 0, header_name = ['linux/ipu.h', 'linux/fb.h']):
+	if conf.check_cc(mandatory = 0, header_name = ['linux/ipu.h', 'linux/fb.h'], uselib_store = 'IMXIPU', uselib = 'KERNEL_HEADERS'):
 			return True
 	return False
 
@@ -69,7 +69,7 @@ def build(bld):
 			features = ['c', bld.env['CLIBTYPE']],
 			includes = ['../..'],
 			use = 'gstimxcommon',
-			uselib = ['EGL', 'GLES2'] + bld.env['PLATFORM_USELIBS'] + ['GSTREAMER_VIDEO'] + bld.env['COMMON_USELIB'],
+			uselib = ['EGL', 'GLES2'] +['IMXIPU', 'KERNEL_HEADERS' ] + bld.env['PLATFORM_USELIBS'] + ['GSTREAMER_VIDEO'] + bld.env['COMMON_USELIB'],
 			target = 'gstimxbayer',
 			source = ['videotransform.c', 'gles2_renderer.c', 'egl_misc.c', 'plugin.c', 'ipu.c', 'ipu_allocator.c'] + bld.env['PLATFORM_SOURCE'],
 			install_path = bld.env['PLUGIN_INSTALL_PATH']

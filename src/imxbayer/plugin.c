@@ -21,10 +21,18 @@
 #include <gst/gst.h>
 
 extern GType imx_bayer_get_type (void);
+extern GType imx_bayer_1sthalf_get_type (void);
+extern GType imx_bayer_2ndhalf_get_type (void);
 
 static gboolean plugin_init(GstPlugin *plugin)
 {
-	return gst_element_register(plugin, "imxbayer", GST_RANK_PRIMARY + 1, imx_bayer_get_type());
+	gboolean ret = TRUE;
+
+	ret = ret && gst_element_register(plugin, "imxbayer", GST_RANK_PRIMARY + 1, imx_bayer_get_type());
+	ret = ret && gst_element_register(plugin, "imxbayer1sthalf", GST_RANK_PRIMARY + 1, imx_bayer_1sthalf_get_type());
+	ret = ret && gst_element_register(plugin, "imxbayer2ndhalf", GST_RANK_PRIMARY + 1, imx_bayer_2ndhalf_get_type());
+
+	return ret;
 }
 
 

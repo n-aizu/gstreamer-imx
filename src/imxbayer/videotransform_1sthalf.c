@@ -1,4 +1,4 @@
-/* 
+/*
  * GStreamer
  * Copyright (C) 2007 David Schleef <ds@schleef.org>
  *
@@ -30,23 +30,23 @@
 #include "gles2_renderer.h"
 #include "trans_common.h"
 
-#define GST_CAT_DEFAULT imx_bayer_debug
+#define GST_CAT_DEFAULT imx_bayer_1sthalf_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
 
 
 
-#define GST_TYPE_IMX_BAYER            (imx_bayer_get_type())
-#define GST_IMXBAYER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_IMX_BAYER,GstImxBayer))
-#define GST_IS_IMXBAYER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_IMX_BAYER))
-#define GST_IMXBAYER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass) ,GST_TYPE_IMX_BAYER,GstImxBayerClass))
-#define GST_IS_IMXBAYER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass) ,GST_TYPE_IMX_BAYER))
-#define GST_IMXBAYER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj) ,GST_TYPE_IMX_BAYER,GstImxBayerClass))
-typedef struct _GstImxBayer GstImxBayer;
-typedef struct _GstImxBayerClass GstImxBayerClass;
+#define GST_TYPE_IMX_BAYER1ST_HALF   (imx_bayer_1sthalf_get_type())
+#define GST_IMXBAYER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_IMX_BAYER1ST_HALF,GstImxBayer1stHalf))
+#define GST_IS_IMXBAYER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_IMX_BAYER1ST_HALF))
+#define GST_IMXBAYER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass) ,GST_TYPE_IMX_BAYER1ST_HALF,GstImxBayer1stHalfClass))
+#define GST_IS_IMXBAYER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass) ,GST_TYPE_IMX_BAYER1ST_HALF))
+#define GST_IMXBAYER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj) ,GST_TYPE_IMX_BAYER1ST_HALF,GstImxBayer1stHalfClass))
+typedef struct _GstImxBayer1stHalf GstImxBayer1stHalf;
+typedef struct _GstImxBayer1stHalfClass GstImxBayer1stHalfClass;
 
-typedef void (*GstImxBayerProcessFunc) (GstImxBayer *, guint8 *, guint);
+typedef void (*GstImxBayer1stHalfProcessFunc) (GstImxBayer1stHalf *, guint8 *, guint);
 
-struct _GstImxBayer
+struct _GstImxBayer1stHalf
 {
   GstBaseTransform basetransform;
 
@@ -55,7 +55,6 @@ struct _GstImxBayer
   int width;
   int height;
   int in_fmt;
-  int out_fmt;
   unsigned int fb;
   unsigned int fbset;
   unsigned int extbuf;
@@ -64,47 +63,46 @@ struct _GstImxBayer
   float blue;
   unsigned int chrom;
   GstImxEglVivTransGLES2Renderer *renderer;
-  GstImxEglVivTransFb *fbdata;
 };
 
-struct _GstImxBayerClass
+struct _GstImxBayer1stHalfClass
 {
   GstBaseTransformClass parent;
 };
 
+/* dummy */
 #define	SRC_CAPS \
-  GST_VIDEO_CAPS_MAKE ("{ BGRA, I420 }")
+  GST_VIDEO_CAPS_MAKE ("{ GRAY8 }")
 
 #define SINK_CAPS "video/x-bayer,format=(string){bggr,grbg,gbrg,rggb}," \
   "width=(int)[1,1920],height=(int)[1,1080],framerate=(fraction)[0/1,MAX]"
 
 
-GType imx_bayer_get_type (void);
+GType imx_bayer_1sthalf_get_type (void);
 
-#define imx_bayer_parent_class parent_class
-G_DEFINE_TYPE (GstImxBayer, imx_bayer, GST_TYPE_BASE_TRANSFORM);
+#define imx_bayer_1sthalf_parent_class parent_class
+G_DEFINE_TYPE (GstImxBayer1stHalf, imx_bayer_1sthalf, GST_TYPE_BASE_TRANSFORM);
 
-static void imx_bayer_set_property (GObject * object, guint prop_id,
+static void imx_bayer_1sthalf_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
-static void imx_bayer_get_property (GObject * object, guint prop_id,
+static void imx_bayer_1sthalf_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static gboolean imx_bayer_set_caps (GstBaseTransform * filter,
+static gboolean imx_bayer_1sthalf_set_caps (GstBaseTransform * filter,
     GstCaps * incaps, GstCaps * outcaps);
-static gboolean imx_bayer_decide_allocation(GstBaseTransform *transform, GstQuery *query);
-static GstFlowReturn imx_bayer_transform (GstBaseTransform * base,
+static GstFlowReturn imx_bayer_1sthalf_transform (GstBaseTransform * base,
     GstBuffer * inbuf, GstBuffer * outbuf);
-static void imx_bayer_reset (GstImxBayer * filter);
-static GstCaps *imx_bayer_transform_caps (GstBaseTransform * base,
+static void imx_bayer_1sthalf_reset (GstImxBayer1stHalf * filter);
+static GstCaps *imx_bayer_1sthalf_transform_caps (GstBaseTransform * base,
     GstPadDirection direction, GstCaps * caps, GstCaps * filter);
-static gboolean imx_bayer_get_unit_size (GstBaseTransform * base,
+static gboolean imx_bayer_1sthalf_get_unit_size (GstBaseTransform * base,
     GstCaps * caps, gsize * size);
-static gboolean imx_bayer_start(GstBaseTransform *base);
-static gboolean imx_bayer_stop(GstBaseTransform *base);
+static gboolean imx_bayer_1sthalf_start(GstBaseTransform *base);
+static gboolean imx_bayer_1sthalf_stop(GstBaseTransform *base);
 
 
 static void
-imx_bayer_class_init (GstImxBayerClass * klass)
+imx_bayer_1sthalf_class_init (GstImxBayer1stHalfClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
@@ -112,8 +110,8 @@ imx_bayer_class_init (GstImxBayerClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
 
-  gobject_class->set_property = imx_bayer_set_property;
-  gobject_class->get_property = imx_bayer_get_property;
+  gobject_class->set_property = imx_bayer_1sthalf_set_property;
+  gobject_class->get_property = imx_bayer_1sthalf_get_property;
 
   gst_element_class_set_static_metadata (gstelement_class,
       "Bayer to BGRA/I420 decoder for cameras", "Filter/Converter/Video",
@@ -128,21 +126,19 @@ imx_bayer_class_init (GstImxBayerClass * klass)
           gst_caps_from_string (SINK_CAPS)));
 
   GST_BASE_TRANSFORM_CLASS (klass)->transform_caps =
-      GST_DEBUG_FUNCPTR (imx_bayer_transform_caps);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_transform_caps);
   GST_BASE_TRANSFORM_CLASS (klass)->get_unit_size =
-      GST_DEBUG_FUNCPTR (imx_bayer_get_unit_size);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_get_unit_size);
   GST_BASE_TRANSFORM_CLASS (klass)->set_caps =
-      GST_DEBUG_FUNCPTR (imx_bayer_set_caps);
-  GST_BASE_TRANSFORM_CLASS (klass)->decide_allocation =
-      GST_DEBUG_FUNCPTR (imx_bayer_decide_allocation);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_set_caps);
   GST_BASE_TRANSFORM_CLASS (klass)->transform =
-      GST_DEBUG_FUNCPTR (imx_bayer_transform);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_transform);
   GST_BASE_TRANSFORM_CLASS (klass)->start =
-      GST_DEBUG_FUNCPTR (imx_bayer_start);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_start);
   GST_BASE_TRANSFORM_CLASS (klass)->stop =
-      GST_DEBUG_FUNCPTR (imx_bayer_stop);
+      GST_DEBUG_FUNCPTR (imx_bayer_1sthalf_stop);
 
-  GST_DEBUG_CATEGORY_INIT (imx_bayer_debug, "imxbayer", 0,
+  GST_DEBUG_CATEGORY_INIT (imx_bayer_1sthalf_debug, "imxbayer", 0,
       "imxbayer element");
 
   imx_bayer_install_proverty1(gobject_class);
@@ -150,17 +146,17 @@ imx_bayer_class_init (GstImxBayerClass * klass)
 }
 
 static void
-imx_bayer_init (GstImxBayer * filter)
+imx_bayer_1sthalf_init (GstImxBayer1stHalf * filter)
 {
-  imx_bayer_reset (filter);
+  imx_bayer_1sthalf_reset (filter);
   gst_base_transform_set_in_place (GST_BASE_TRANSFORM (filter), TRUE);
 }
 
 static void
-imx_bayer_set_property (GObject * object, guint prop_id,
+imx_bayer_1sthalf_set_property (GObject * object, guint prop_id,
     G_GNUC_UNUSED const GValue * value, GParamSpec * pspec)
 {
-  GstImxBayer *imxbayer = GST_IMXBAYER (object);
+  GstImxBayer1stHalf *imxbayer = GST_IMXBAYER (object);
 
   switch (prop_id) {
     case PROP_FBDEV_NUM:
@@ -191,10 +187,10 @@ imx_bayer_set_property (GObject * object, guint prop_id,
 }
 
 static void
-imx_bayer_get_property (GObject * object, guint prop_id,
+imx_bayer_1sthalf_get_property (GObject * object, guint prop_id,
     G_GNUC_UNUSED GValue * value, GParamSpec * pspec)
 {
-  GstImxBayer *imxbayer = GST_IMXBAYER (object);
+  GstImxBayer1stHalf *imxbayer = GST_IMXBAYER (object);
 
   switch (prop_id) {
     case PROP_FBDEV_NUM:
@@ -225,10 +221,10 @@ imx_bayer_get_property (GObject * object, guint prop_id,
 }
 
 static gboolean
-imx_bayer_set_caps (GstBaseTransform * base, GstCaps * incaps,
+imx_bayer_1sthalf_set_caps (GstBaseTransform * base, GstCaps * incaps,
     GstCaps * outcaps)
 {
-  GstImxBayer *imxbayer = GST_IMXBAYER (base);
+  GstImxBayer1stHalf *imxbayer = GST_IMXBAYER (base);
   GstStructure *structure;
   const char *format;
   GstVideoInfo info;
@@ -254,17 +250,6 @@ imx_bayer_set_caps (GstBaseTransform * base, GstCaps * incaps,
     return FALSE;
   }
 
-  structure = gst_caps_get_structure (outcaps, 0);
-
-  format = gst_structure_get_string (structure, "format");
-  if (g_str_equal (format, "BGRA")) {
-    imxbayer->out_fmt = GST_EGL_TRANS_FORMAT_BGRA;
-  } else if (g_str_equal (format, "I420")) {
-    imxbayer->out_fmt = GST_EGL_TRANS_FORMAT_I420;
-  } else {
-    return FALSE;
-  }
-
   if (gst_imx_egl_viv_trans_gles2_renderer_setup(imxbayer->renderer,
 												imxbayer->width,
 												imxbayer->height,
@@ -278,13 +263,6 @@ imx_bayer_set_caps (GstBaseTransform * base, GstCaps * incaps,
 	  return FALSE;
   }
 
-  if (gst_imx_egl_viv_trans_gles2_fb_setup(imxbayer->fbdata,
-												imxbayer->width,
-												imxbayer->height,
-												imxbayer->out_fmt) == FALSE) {
-	  return FALSE;
-  }
-
   /* To cater for different RGB formats, we need to set params for later */
   gst_video_info_from_caps (&info, outcaps);
   imxbayer->info = info;
@@ -293,7 +271,7 @@ imx_bayer_set_caps (GstBaseTransform * base, GstCaps * incaps,
 }
 
 static void
-imx_bayer_reset (GstImxBayer * filter)
+imx_bayer_1sthalf_reset (GstImxBayer1stHalf * filter)
 {
   filter->width = 0;
   filter->height = 0;
@@ -308,7 +286,7 @@ imx_bayer_reset (GstImxBayer * filter)
 }
 
 static GstCaps *
-imx_bayer_transform_caps (G_GNUC_UNUSED GstBaseTransform * base,
+imx_bayer_1sthalf_transform_caps (G_GNUC_UNUSED GstBaseTransform * base,
     GstPadDirection direction, GstCaps * caps, G_GNUC_UNUSED GstCaps * filter)
 {
   GstStructure *structure;
@@ -340,7 +318,7 @@ imx_bayer_transform_caps (G_GNUC_UNUSED GstBaseTransform * base,
 }
 
 static gboolean
-imx_bayer_get_unit_size (GstBaseTransform * base, GstCaps * caps,
+imx_bayer_1sthalf_get_unit_size (GstBaseTransform * base, GstCaps * caps,
     gsize * size)
 {
   GstStructure *structure;
@@ -358,8 +336,8 @@ imx_bayer_get_unit_size (GstBaseTransform * base, GstCaps * caps,
       *size = GST_ROUND_UP_4 (width) * height;
       return TRUE;
     } else {
-      /* For output, calculate according to format (always 32 bits) */
-      *size = width * height * 4;
+      /* dummy */
+      *size = width * height;
       return TRUE;
     }
 
@@ -370,73 +348,45 @@ imx_bayer_get_unit_size (GstBaseTransform * base, GstCaps * caps,
 }
 
 
-static gboolean imx_bayer_decide_allocation(G_GNUC_UNUSED GstBaseTransform *transform, GstQuery *query)
-{
-	return imx_bayer_decide_allocation_base(query);
-}
-
-
 static GstFlowReturn
-imx_bayer_transform (GstBaseTransform * base, GstBuffer * inbuf,
+imx_bayer_1sthalf_transform (GstBaseTransform * base, GstBuffer * inbuf,
     GstBuffer * outbuf)
 {
-	GstImxBayer *imxbayer = GST_IMXBAYER(base);
+	GstImxBayer1stHalf *imxbayer = GST_IMXBAYER(base);
 	gboolean eglstat;
 	GstFlowReturn flowstat = GST_FLOW_OK;
-	
-	eglstat = gst_imx_egl_viv_trans_gles2_renderer_render_frame_onethread(
+
+	eglstat = gst_imx_egl_viv_trans_gles2_renderer_render_frame(
 					imxbayer->renderer,
 					inbuf,
 					outbuf);
 	if (eglstat == FALSE) {
 		flowstat = GST_FLOW_ERROR;
-		goto end;
 	}
 
-	eglstat = gst_imx_egl_viv_trans_gles2_copy_fb_onethread(
-					imxbayer->fbdata,
-					inbuf,
-					outbuf);
-	if (eglstat == FALSE) {
-		flowstat = GST_FLOW_ERROR;
-	}
-
-end:
 	return flowstat;
 }
 
-static gboolean imx_bayer_start(GstBaseTransform *base)
+static gboolean imx_bayer_1sthalf_start(GstBaseTransform *base)
 {
 	gboolean ret = TRUE;
-	GstImxBayer *imxbayer = GST_IMXBAYER(base);
+	GstImxBayer1stHalf *imxbayer = GST_IMXBAYER(base);
 	char fb[4];
 
 	snprintf(fb, sizeof(fb), "%u", imxbayer->fb);
 	imxbayer->renderer = gst_imx_egl_viv_trans_gles2_renderer_create(fb);
 	if (imxbayer->renderer == NULL) {
 		ret = FALSE;
-		goto end;
 	}
 
-	imxbayer->fbdata = gst_imx_egl_viv_trans_gles2_fbdata_create(imxbayer->fb);
-	if (imxbayer->fbdata == NULL) {
-		gst_imx_egl_viv_trans_gles2_renderer_destroy(imxbayer->renderer);
-		ret = FALSE;
-	}
-
-end:
 	return ret;
 }
 
-static gboolean imx_bayer_stop(GstBaseTransform *base)
+static gboolean imx_bayer_1sthalf_stop(GstBaseTransform *base)
 {
-	GstImxBayer *imxbayer = GST_IMXBAYER(base);
+	GstImxBayer1stHalf *imxbayer = GST_IMXBAYER(base);
 
 	gst_imx_egl_viv_trans_gles2_renderer_destroy(imxbayer->renderer);
 	imxbayer->renderer = NULL;
-
-	gst_imx_egl_viv_trans_gles2_fb_deinit(imxbayer->fbdata);
-	imxbayer->fbdata = NULL;
-
 	return TRUE;
 }

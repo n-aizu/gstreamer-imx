@@ -1296,9 +1296,6 @@ GstImxEglVivTransGLES2Renderer* gst_imx_egl_viv_trans_gles2_renderer_create(char
 			native_display_name,
 			sizeof(renderer->display_name) - 1);
 
-	g_mutex_init(&fb_mutex);
-	g_cond_init(&fb_cond_prod);
-	g_cond_init(&fb_cond_cons);
 	fb_data = FALSE;
 	fb_first = TRUE;
 
@@ -1336,10 +1333,6 @@ void gst_imx_egl_viv_trans_gles2_renderer_destroy(GstImxEglVivTransGLES2Renderer
 	fb_data = TRUE;
 	g_mutex_unlock(&fb_mutex);
 	g_cond_signal(&fb_cond_cons);
-
-	g_cond_clear(&fb_cond_prod);
-	g_cond_clear(&fb_cond_cons);
-	g_mutex_clear(&fb_mutex);
 
 	GST_INFO("stopping renderer");
 	gst_imx_egl_viv_trans_gles2_renderer_stop(renderer);

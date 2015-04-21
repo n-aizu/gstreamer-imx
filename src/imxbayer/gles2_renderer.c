@@ -129,7 +129,7 @@ static char const *vert_demosaic =
 	"    yCoord = center.y + vec4(-2.0 * invSize.y,\n"
 	"        -invSize.y, invSize.y, 2.0 * invSize.y);\n"
 
-	"gl_Position = vec4(a_position, 0.0, 1.0);\n"
+	"    gl_Position = vec4(a_position, 0.0, 1.0);\n"
 	"}"
 	;
 
@@ -995,25 +995,43 @@ gboolean gst_imx_egl_viv_trans_gles2_renderer_render_frame(GstImxEglVivTransGLES
 
 	glGetError(); /* clear out any existing error */
 
+	/* GPU processing time for demosaic is about two times of */
+	/* IPU processing time for colorspace conversion.         */
+	/* So wait 1 frame before start of IPU.                   */
 	if (fb_first) {
 		fb_first = FALSE;
 	}
 	else {
+		gboolean swap_done = FALSE;
+
+		/* optimization */
+		if (!fb_data) {
+			gst_imx_egl_viv_trans_egl_platform_swap_buffers(platform);
+			swap_done = TRUE;
+		}
+
+		/* optimization - call glFinish regardless of calling swap_buffers */
+		/* (somehow this way is more efficient)                            */
 		glFinish();
 
 		g_mutex_lock(&fb_mutex);
-		while(fb_data) {
-			gint64 end_time = g_get_monotonic_time() + 1000 * G_TIME_SPAN_MILLISECOND;
-			gboolean wait_ret = g_cond_wait_until(&fb_cond_prod, &fb_mutex, end_time);
-			if (wait_ret == FALSE) {
-				/* timeout: overwrite framebuffer */
-				break;
+		if (!swap_done) {
+			while(fb_data) {
+				gint64 end_time = g_get_monotonic_time() + 1000 * G_TIME_SPAN_MILLISECOND;
+				gboolean wait_ret = g_cond_wait_until(&fb_cond_prod, &fb_mutex, end_time);
+				if (wait_ret == FALSE) {
+					/* timeout: overwrite framebuffer */
+					break;
+				}
 			}
+
+			gst_imx_egl_viv_trans_egl_platform_swap_buffers(platform);
+			glFinish();
 		}
 
 		fb_data = TRUE;
-
 		g_mutex_unlock(&fb_mutex);
+
 		g_cond_signal(&fb_cond_cons);
 	}
 
@@ -1039,9 +1057,7 @@ gboolean gst_imx_egl_viv_trans_gles2_renderer_render_frame(GstImxEglVivTransGLES
 		goto end;
 	}
 
-	gst_imx_egl_viv_trans_egl_platform_swap_buffers(platform);
 	ret = TRUE;
-
 end:
 	return ret;
 }

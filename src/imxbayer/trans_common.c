@@ -62,7 +62,7 @@ void imx_bayer_install_proverty1(GObjectClass *oclass)
 			"Red color filter",
 			"Red color filter value",
 			0.1, 5.0,
-			1.0,
+			DEFAULT_RED_VAL,
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
 		)
 	);
@@ -75,7 +75,7 @@ void imx_bayer_install_proverty1(GObjectClass *oclass)
 			"Green color filter",
 			"Green color filter value",
 			0.1, 5.0,
-			1.0,
+			DEFAULT_GREEN_VAL,
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
 		)
 	);
@@ -88,7 +88,7 @@ void imx_bayer_install_proverty1(GObjectClass *oclass)
 			"Blue color filter",
 			"Blue color filter value",
 			0.1, 5.0,
-			1.0,
+			DEFAULT_BLUE_VAL,
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
 		)
 	);
@@ -101,7 +101,7 @@ void imx_bayer_install_proverty1(GObjectClass *oclass)
 			"chrominance",
 			"chrominance value",
 			0, 255,
-			128,
+			DEFAULT_CHROM_VAL,
 			G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
 		)
 	);

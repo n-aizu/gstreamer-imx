@@ -275,12 +275,13 @@ imx_bayer_1sthalf_reset (GstImxBayer1stHalf * filter)
 {
   filter->width = 0;
   filter->height = 0;
-  filter->red = 1.0;
-  filter->green = 1.0;
-  filter->blue = 1.0;
-  filter->fbset = 0;
-  filter->extbuf = 0;
-  filter->chrom = 128;
+  filter->red = DEFAULT_RED_VAL;
+  filter->green = DEFAULT_GREEN_VAL;
+  filter->blue = DEFAULT_BLUE_VAL;
+  filter->fb = DEFAULT_FBDEV_NUM;
+  filter->fbset = DEFAULT_FBSET;
+  filter->extbuf = DEFAULT_EXTBUF;
+  filter->chrom = DEFAULT_CHROM_VAL;
 
   gst_video_info_init (&filter->info);
 }

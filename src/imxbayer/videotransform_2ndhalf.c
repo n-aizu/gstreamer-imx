@@ -227,7 +227,7 @@ imx_bayer_2ndhalf_reset (GstImxBayer2ndHalf * filter)
 {
   filter->width = 0;
   filter->height = 0;
-  filter->fb = 0;
+  filter->fb = DEFAULT_FBDEV_NUM;
 
   gst_video_info_init (&filter->info);
 }

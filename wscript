@@ -200,6 +200,7 @@ def configure(conf):
 	conf.recurse('src/eglvivsink')
 	if not conf.options.build_for_android:
 		conf.recurse('src/v4l2src')
+		conf.recurse('src/imxbayer')
 	conf.recurse('src/audio')
 
 
@@ -217,6 +218,7 @@ def build(bld):
 	bld.recurse('src/eglvivsink')
 	if not bld.env['BUILD_FOR_ANDROID']:
 		bld.recurse('src/v4l2src')
+		bld.recurse('src/imxbayer')
 	bld.recurse('src/audio')
 	bld.recurse('src/blitter')
 	bld.recurse('src/compositor')

@@ -133,6 +133,8 @@ Available plugins
 * `imxv4l2videosrc` : customized Video4Linux source with i.MX specific tweaks
 * `imxuniaudiodec` : audio decoder plugin based on Freescale's unified audio (UniAudio) architecture
 * `imxmp3audioenc` : MP3 audio encoder plugin based on Freescale's MP3 encoder
+* `imxbayer/imxbayer1sthalf/imxbayer2ndhalf` : video transform element for converting bayer images with i.MX GPU and IPU(see also: [HummingBoard Kernel tree for Raspbery PI camera](https://github.com/n-aizu/linux-linaro-stable-mx6))
+
 
 
 Dependencies

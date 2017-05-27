@@ -195,16 +195,14 @@ static gint gst_imx_v4l2src_capture_setup(GstImxV4l2VideoSrc *v4l2src)
 		goto fail;
 	}
 
-	if (!fmt.fmt.pix.pixelformat)
+	fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	fmtdesc.index = 0;
+	if (ioctl(fd_v4l, VIDIOC_ENUM_FMT, &fmtdesc) < 0)
 	{
-		fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		fmtdesc.index = 0;
-		if (ioctl(fd_v4l, VIDIOC_ENUM_FMT, &fmtdesc) < 0)
-		{
-			GST_ERROR_OBJECT(v4l2src, "VIDIOC_ENUM_FMT failed: %s", strerror(errno));
-			goto fail;
-		}
-
+		GST_ERROR_OBJECT(v4l2src, "VIDIOC_ENUM_FMT failed: %s", strerror(errno));
+	}
+	else
+	{
 		fmt.fmt.pix.pixelformat = fmtdesc.pixelformat;
 	}
 
@@ -252,9 +250,18 @@ static gint gst_imx_v4l2src_capture_setup(GstImxV4l2VideoSrc *v4l2src)
 			v4l2src->fps_n, v4l2src->fps_d);
 	}
 
-	/* Determine the desired input pixelformat (UYVY or I420)
-	 * by looking at the allowed srccaps */
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB8)
 	{
+		pixelformat = fmt.fmt.pix.pixelformat;
+	}
+	else
+	{
+		/* Determine the desired input pixelformat (UYVY or I420)
+		 * by looking at the allowed srccaps */
+
 		GstCaps *allowed_src_caps, *available_format_caps, *allowed_format_caps;
 
 		pixelformat = V4L2_PIX_FMT_YUV420;
@@ -468,12 +475,24 @@ static GstCaps *gst_imx_v4l2src_caps_for_current_setup(GstImxV4l2VideoSrc *v4l2s
 	const gchar *pixel_format = NULL;
 	const gchar *interlace_mode = NULL;
 	struct v4l2_format fmt;
+	struct v4l2_fmtdesc fmtdesc = {0};
 
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl(GST_IMX_FD_OBJECT_GET_FD(v4l2src->fd_obj_v4l), VIDIOC_G_FMT, &fmt) < 0)
 	{
 		GST_ERROR_OBJECT(v4l2src, "VIDIOC_G_FMT failed: %s", strerror(errno));
 		return NULL;
+	}
+
+	fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	fmtdesc.index = 0;
+	if (ioctl(GST_IMX_FD_OBJECT_GET_FD(v4l2src->fd_obj_v4l), VIDIOC_ENUM_FMT, &fmtdesc) < 0)
+	{
+		GST_ERROR_OBJECT(v4l2src, "VIDIOC_ENUM_FMT failed: %s", strerror(errno));
+	}
+	else
+	{
+		fmt.fmt.pix.pixelformat = fmtdesc.pixelformat;
 	}
 
 	/* switch/case table taken from gst-plugins-good/sys/v4l2/gstv4l2object.c */
@@ -589,11 +608,24 @@ static GstCaps *gst_imx_v4l2src_caps_for_current_setup(GstImxV4l2VideoSrc *v4l2s
 		case V4L2_PIX_FMT_NV24:
 			gst_fmt = GST_VIDEO_FORMAT_NV24;
 			break;
+		case V4L2_PIX_FMT_SBGGR8:
+			pixel_format = "bggr";
+			break;
+		case V4L2_PIX_FMT_SGBRG8:
+			pixel_format = "gbrg";
+			break;
+		case V4L2_PIX_FMT_SGRBG8:
+			pixel_format = "grbg";
+			break;
+		case V4L2_PIX_FMT_SRGGB8:
+			pixel_format = "rggb";
+			break;
 		default:
 			gst_fmt = gst_video_format_from_fourcc(fmt.fmt.pix.pixelformat);
 	}
 
-	pixel_format = gst_video_format_to_string(gst_fmt);
+	if (!pixel_format)
+		pixel_format = gst_video_format_to_string(gst_fmt);
 
 	if (v4l2src->is_tvin && !fmt.fmt.pix.field)
 	{
@@ -613,14 +645,30 @@ static GstCaps *gst_imx_v4l2src_caps_for_current_setup(GstImxV4l2VideoSrc *v4l2s
 			interlace_mode = "progressive";
 	}
 
-	return gst_caps_new_simple("video/x-raw",
-			"format", G_TYPE_STRING, pixel_format,
-			"width", G_TYPE_INT, v4l2src->capture_width,
-			"height", G_TYPE_INT, v4l2src->capture_height,
-			"interlace-mode", G_TYPE_STRING, interlace_mode,
-			"framerate", GST_TYPE_FRACTION, v4l2src->fps_n, v4l2src->fps_d,
-			"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
-			NULL);
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SBGGR8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SGBRG8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SGRBG8 ||
+		fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_SRGGB8)
+	{
+		return gst_caps_new_simple("video/x-bayer",
+				"format", G_TYPE_STRING, pixel_format,
+				"width", G_TYPE_INT, v4l2src->capture_width,
+				"height", G_TYPE_INT, v4l2src->capture_height,
+				"framerate", GST_TYPE_FRACTION, v4l2src->fps_n, v4l2src->fps_d,
+				"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
+				NULL);
+	}
+	else
+	{
+		return gst_caps_new_simple("video/x-raw",
+				"format", G_TYPE_STRING, pixel_format,
+				"width", G_TYPE_INT, v4l2src->capture_width,
+				"height", G_TYPE_INT, v4l2src->capture_height,
+				"interlace-mode", G_TYPE_STRING, interlace_mode,
+				"framerate", GST_TYPE_FRACTION, v4l2src->fps_n, v4l2src->fps_d,
+				"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
+				NULL);
+	}
 }
 
 static gboolean gst_imx_v4l2src_negotiate(GstBaseSrc *src)
@@ -646,16 +694,23 @@ static GstCaps *gst_imx_v4l2src_get_caps(GstBaseSrc *src, GstCaps *filter)
 
 	GST_INFO_OBJECT(v4l2src, "get caps filter %" GST_PTR_FORMAT, (gpointer)filter);
 
-	caps = gst_caps_from_string(
-		"video/x-raw"
-		", format = (string) { UYVY, I420 }"
-		", width = (gint) [ 16, MAX ]"
-		", height = (gint) [ 16, MAX ]"
-		", interlace-mode = (string) { progressive, interleaved }"
-		", framerate = (fraction) [ 0/1, 100/1 ]"
-		", pixel-aspect-ratio = (fraction) [ 0/1, 100/1 ]"
-		";"
-	);
+	caps = gst_caps_new_full(
+			gst_structure_new("video/x-raw",
+				"format = (string) { UYVY, I420 }"
+				"width", GST_TYPE_INT_RANGE, 16, G_MAXINT,
+				"height", GST_TYPE_INT_RANGE, 16, G_MAXINT,
+				"interlace-mode = (string) { progressive, interleaved }"
+				"framerate", GST_TYPE_FRACTION_RANGE, 0, 1, 100, 1,
+				"pixel-aspect-ratio", GST_TYPE_FRACTION_RANGE, 0, 1, 100, 1,
+				NULL),
+			gst_structure_new("video/x-bayer",
+				"format = (string) { bggr, grbg, gbrg, rggb }"
+				"width", GST_TYPE_INT_RANGE, 16, G_MAXINT,
+				"height", GST_TYPE_INT_RANGE, 16, G_MAXINT,
+				"framerate", GST_TYPE_FRACTION_RANGE, 0, 1, 100, 1,
+				"pixel-aspect-ratio", GST_TYPE_FRACTION_RANGE, 0, 1, 100, 1,
+				NULL),
+			NULL);
 
 	GST_INFO_OBJECT(v4l2src, "get caps %" GST_PTR_FORMAT, (gpointer)caps);
 
